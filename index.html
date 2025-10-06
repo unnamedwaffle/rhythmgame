@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythm Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .note {
+            transition: transform 0.1s ease-out;
+        }
+        .note.hit {
+            animation: noteHit 0.3s ease-out;
+        }
+        .hold-note {
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 8px 8px 8px 8px;
+            border: 3px solid #fff3cd;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.5);
+            position: relative;
+        }
+        .hold-note::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: calc(100% - 16px);
+            background: linear-gradient(180deg, #f59e0b 0%, #eab308 50%, #f59e0b 100%);
+            border-radius: 4px;
+            z-index: 1;
+        }
+        .single-note {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 50%, #3b82f6 100%);
+            border-radius: 8px;
+            border: 3px solid #bfdbfe;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+        }
+        @keyframes noteHit {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes scorePopup {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.2); opacity: 0; }
+        }
+        @keyframes countdownPulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .score-popup {
+            animation: scorePopup 0.8s ease-out forwards;
+        }
+        .countdown-pulse {
+            animation: countdownPulse 1s ease-in-out;
+        }
+        .lane {
+            border-left: 2px solid rgba(255,255,255,0.2);
+            border-right: 2px solid rgba(255,255,255,0.2);
+        }
+        .hit-line {
+            background: linear-gradient(90deg, transparent 0%, #fff 50%, transparent 100%);
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+        }
+        .menu-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .level-card {
+            transition: all 0.3s ease;
+        }
+        .level-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .stats-card {
+            backdrop-filter: blur(15px);
+            background: rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white overflow-hidden">
+    <!-- Dark mode detection -->
+    <script>
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+
+    <!-- Menu Screen -->
+    <div id="menuScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-y-auto">
+        <div class="flex flex-col items-center justify-center min-h-screen p-4 py-8">
+            <div class="text-center mb-12">
+                <h1 class="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                    Rhythm Master
+                </h1>
+                <p class="text-xl text-gray-300">Choose your challenge</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
+                <!-- Level Cards -->
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="0">
+                    <div class="text-2xl font-bold mb-2 text-green-400">Level 1</div>
+                    <div class="text-lg mb-2">Easy Starter</div>
+                    <div class="text-sm text-gray-300 mb-4">Perfect for beginners. Simple single notes to get you started.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 120</span>
+                        <span class="text-yellow-400">★☆☆☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="1">
+                    <div class="text-2xl font-bold mb-2 text-green-400">Level 2</div>
+                    <div class="text-lg mb-2">Gentle Flow</div>
+                    <div class="text-sm text-gray-300 mb-4">Introduces basic patterns and your first hold notes.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 130</span>
+                        <span class="text-yellow-400">★★☆☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="2">
+                    <div class="text-2xl font-bold mb-2 text-green-400">Level 3</div>
+                    <div class="text-lg mb-2">Steady Beat</div>
+                    <div class="text-sm text-gray-300 mb-4">Regular rhythm patterns with mixed note types.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 140</span>
+                        <span class="text-yellow-400">★★☆☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="3">
+                    <div class="text-2xl font-bold mb-2 text-yellow-400">Level 4</div>
+                    <div class="text-lg mb-2">Double Trouble</div>
+                    <div class="text-sm text-gray-300 mb-4">Two lanes at once! Learn coordination basics.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 135</span>
+                        <span class="text-yellow-400">★★☆☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="4">
+                    <div class="text-2xl font-bold mb-2 text-yellow-400">Level 5</div>
+                    <div class="text-lg mb-2">Rhythm Walker</div>
+                    <div class="text-sm text-gray-300 mb-4">Moving patterns that test your timing skills.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 145</span>
+                        <span class="text-yellow-400">★★★☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="5">
+                    <div class="text-2xl font-bold mb-2 text-yellow-400">Level 6</div>
+                    <div class="text-lg mb-2">Hold the Beat</div>
+                    <div class="text-sm text-gray-300 mb-4">Extended hold notes mixed with quick taps.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 150</span>
+                        <span class="text-yellow-400">★★★☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="6">
+                    <div class="text-2xl font-bold mb-2 text-yellow-400">Level 7</div>
+                    <div class="text-lg mb-2">Crossover</div>
+                    <div class="text-sm text-gray-300 mb-4">Cross-lane patterns that challenge your reflexes.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 155</span>
+                        <span class="text-yellow-400">★★★☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="7">
+                    <div class="text-2xl font-bold mb-2 text-orange-400">Level 8</div>
+                    <div class="text-lg mb-2">Syncopation</div>
+                    <div class="text-sm text-gray-300 mb-4">Off-beat rhythms that test your musicality.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 160</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="8">
+                    <div class="text-2xl font-bold mb-2 text-orange-400">Level 9</div>
+                    <div class="text-lg mb-2">Cascade</div>
+                    <div class="text-sm text-gray-300 mb-4">Flowing sequences that demand precision.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 165</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="9">
+                    <div class="text-2xl font-bold mb-2 text-orange-400">Level 10</div>
+                    <div class="text-lg mb-2">Tempo Storm</div>
+                    <div class="text-sm text-gray-300 mb-4">Variable speeds and complex hold combinations.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 170</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="10">
+                    <div class="text-2xl font-bold mb-2 text-red-400">Level 11</div>
+                    <div class="text-lg mb-2">Lightning Fast</div>
+                    <div class="text-sm text-gray-300 mb-4">High-speed gameplay that demands quick reflexes.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 180</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="11">
+                    <div class="text-2xl font-bold mb-2 text-red-400">Level 12</div>
+                    <div class="text-lg mb-2">Complex Maze</div>
+                    <div class="text-sm text-gray-300 mb-4">Intricate patterns that challenge your skills.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 185</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="12">
+                    <div class="text-2xl font-bold mb-2 text-red-400">Level 13</div>
+                    <div class="text-lg mb-2">Speed Master</div>
+                    <div class="text-sm text-gray-300 mb-4">Lightning-fast gameplay for rhythm veterans.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 200</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="13">
+                    <div class="text-2xl font-bold mb-2 text-purple-400">Level 14</div>
+                    <div class="text-lg mb-2">Chaos Theory</div>
+                    <div class="text-sm text-gray-300 mb-4">Random madness that tests your adaptability.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 210</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="14">
+                    <div class="text-2xl font-bold mb-2 text-purple-400">Level 15</div>
+                    <div class="text-lg mb-2">Ultimate Test</div>
+                    <div class="text-sm text-gray-300 mb-4">The final challenge. Only masters survive.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 220</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <!-- Advanced Levels 16-30 -->
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="15">
+                    <div class="text-2xl font-bold mb-2 text-cyan-400">Level 16</div>
+                    <div class="text-lg mb-2">Alternating Focus</div>
+                    <div class="text-sm text-gray-300 mb-4">Master left-right alternating patterns and hand coordination.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 140</span>
+                        <span class="text-yellow-400">★★★☆☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="16">
+                    <div class="text-2xl font-bold mb-2 text-cyan-400">Level 17</div>
+                    <div class="text-lg mb-2">Polyrhythm Basic</div>
+                    <div class="text-sm text-gray-300 mb-4">Learn to handle multiple rhythms simultaneously.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 130</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="17">
+                    <div class="text-2xl font-bold mb-2 text-cyan-400">Level 18</div>
+                    <div class="text-lg mb-2">Acceleration Zone</div>
+                    <div class="text-sm text-gray-300 mb-4">Speed gradually increases throughout the level.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 120→180</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="18">
+                    <div class="text-2xl font-bold mb-2 text-teal-400">Level 19</div>
+                    <div class="text-lg mb-2">Hand Independence</div>
+                    <div class="text-sm text-gray-300 mb-4">Train each hand separately with different patterns.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 150</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="19">
+                    <div class="text-2xl font-bold mb-2 text-teal-400">Level 20</div>
+                    <div class="text-lg mb-2">Burst Training</div>
+                    <div class="text-sm text-gray-300 mb-4">Intense bursts followed by recovery periods.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 160</span>
+                        <span class="text-yellow-400">★★★★☆</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="20">
+                    <div class="text-2xl font-bold mb-2 text-teal-400">Level 21</div>
+                    <div class="text-lg mb-2">Endurance Test</div>
+                    <div class="text-sm text-gray-300 mb-4">Long sustained patterns that test your stamina.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 140</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="21">
+                    <div class="text-2xl font-bold mb-2 text-indigo-400">Level 22</div>
+                    <div class="text-lg mb-2">Precision Timing</div>
+                    <div class="text-sm text-gray-300 mb-4">Tight timing windows demand perfect accuracy.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 135</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="22">
+                    <div class="text-2xl font-bold mb-2 text-indigo-400">Level 23</div>
+                    <div class="text-lg mb-2">Pattern Memory</div>
+                    <div class="text-sm text-gray-300 mb-4">Complex repeating patterns test your memory skills.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 145</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="23">
+                    <div class="text-2xl font-bold mb-2 text-indigo-400">Level 24</div>
+                    <div class="text-lg mb-2">Galloping Rhythms</div>
+                    <div class="text-sm text-gray-300 mb-4">Master the classic gallop rhythm pattern.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 155</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="24">
+                    <div class="text-2xl font-bold mb-2 text-violet-400">Level 25</div>
+                    <div class="text-lg mb-2">Triplet Master</div>
+                    <div class="text-sm text-gray-300 mb-4">Three-note groupings in various configurations.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 140</span>
+                        <span class="text-yellow-400">★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="25">
+                    <div class="text-2xl font-bold mb-2 text-violet-400">Level 26</div>
+                    <div class="text-lg mb-2">Multi-Lane Chords</div>
+                    <div class="text-sm text-gray-300 mb-4">Multiple simultaneous notes test coordination.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 125</span>
+                        <span class="text-yellow-400">★★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="26">
+                    <div class="text-2xl font-bold mb-2 text-violet-400">Level 27</div>
+                    <div class="text-lg mb-2">Staggered Assault</div>
+                    <div class="text-sm text-gray-300 mb-4">Notes offset by tiny amounts create complex timing.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 170</span>
+                        <span class="text-yellow-400">★★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="27">
+                    <div class="text-2xl font-bold mb-2 text-pink-400">Level 28</div>
+                    <div class="text-lg mb-2">Rhythmic Labyrinth</div>
+                    <div class="text-sm text-gray-300 mb-4">Navigate through ever-changing rhythm patterns.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 165</span>
+                        <span class="text-yellow-400">★★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="28">
+                    <div class="text-2xl font-bold mb-2 text-pink-400">Level 29</div>
+                    <div class="text-lg mb-2">Evolution</div>
+                    <div class="text-sm text-gray-300 mb-4">Patterns that continuously evolve and transform.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 150</span>
+                        <span class="text-yellow-400">★★★★★★</span>
+                    </div>
+                </div>
+                
+                <div class="level-card menu-card rounded-xl p-6 cursor-pointer" data-level="29">
+                    <div class="text-2xl font-bold mb-2 text-pink-400">Level 30</div>
+                    <div class="text-lg mb-2">The Gauntlet</div>
+                    <div class="text-sm text-gray-300 mb-4">The ultimate test combining every skill mastered.</div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-blue-400">BPM: 200</span>
+                        <span class="text-yellow-400">★★★★★★</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="hidden fixed inset-0 z-40 bg-gradient-to-b from-purple-900 via-blue-900 to-black overflow-hidden">
+        <!-- Score and Info -->
+        <div class="absolute top-4 left-4 z-20">
+            <div class="text-2xl font-bold mb-2">Score: <span id="score">0</span></div>
+            <div class="text-lg">Combo: <span id="combo">0</span></div>
+            <div class="text-sm opacity-75">Accuracy: <span id="accuracy">100%</span></div>
+        </div>
+
+        <!-- Current Level Info -->
+        <div class="absolute top-4 right-4 z-20">
+            <div class="text-lg font-bold" id="currentLevel">Level 1</div>
+            <div class="text-sm opacity-75" id="currentLevelName">Easy Starter</div>
+        </div>
+
+        <!-- Game Controls -->
+        <div class="absolute bottom-4 left-4 z-20 space-x-2">
+            <button id="playBtn" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded font-bold text-base">Play</button>
+            <button id="pauseBtn" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-2 rounded font-bold text-base" disabled>Pause</button>
+            <button id="stopBtn" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-bold text-base" disabled>Stop</button>
+            <button id="menuBtn" class="bg-gray-600 hover:bg-gray-700 px-6 py-2 rounded font-bold text-base">Menu</button>
+        </div>
+
+        <!-- Instructions -->
+        <div class="absolute bottom-4 right-4 z-20 text-sm opacity-75 max-w-xs">
+            <div>Press 1, 2, 3, 4 keys or tap lanes</div>
+            <div>Hold for yellow notes, tap for blue notes</div>
+        </div>
+
+        <!-- Game Area -->
+        <div id="gameArea" class="relative w-full h-full flex">
+            <!-- Lanes -->
+            <div id="lane1" class="lane flex-1 relative bg-gradient-to-b from-transparent to-purple-900/20">
+                <div class="absolute bottom-0 w-full text-center text-2xl font-bold py-4 bg-gradient-to-t from-black/50">1</div>
+            </div>
+            <div id="lane2" class="lane flex-1 relative bg-gradient-to-b from-transparent to-blue-900/20">
+                <div class="absolute bottom-0 w-full text-center text-2xl font-bold py-4 bg-gradient-to-t from-black/50">2</div>
+            </div>
+            <div id="lane3" class="lane flex-1 relative bg-gradient-to-b from-transparent to-green-900/20">
+                <div class="absolute bottom-0 w-full text-center text-2xl font-bold py-4 bg-gradient-to-t from-black/50">3</div>
+            </div>
+            <div id="lane4" class="lane flex-1 relative bg-gradient-to-b from-transparent to-red-900/20">
+                <div class="absolute bottom-0 w-full text-center text-2xl font-bold py-4 bg-gradient-to-t from-black/50">4</div>
+            </div>
+        </div>
+
+        <!-- Hit Line -->
+        <div class="hit-line absolute bottom-20 left-0 right-0 h-1 z-10"></div>
+
+        <!-- Score Popup Container -->
+        <div id="scorePopups" class="absolute inset-0 pointer-events-none z-30"></div>
+        
+        <!-- Countdown Timer -->
+        <div id="countdownOverlay" class="hidden fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div class="text-center">
+                <div class="text-8xl font-bold text-white mb-4" id="countdownNumber">3</div>
+                <div class="text-2xl text-gray-300">Get Ready!</div>
+                <div class="text-lg text-gray-400 mt-2" id="levelPrep">Level 1 - Easy Starter</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Screen -->
+    <div id="statsScreen" class="hidden fixed inset-0 z-50 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="stats-card rounded-2xl p-8 max-w-2xl w-full border border-gray-600">
+                <div class="text-center mb-8">
+                    <h2 class="text-4xl font-bold mb-2 bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                        Level Complete!
+                    </h2>
+                    <div class="text-xl text-gray-300" id="completedLevel">Level 1 - Easy Starter</div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6 mb-8">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-400 mb-2" id="finalScore">0</div>
+                        <div class="text-gray-300">Final Score</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-yellow-400 mb-2" id="maxCombo">0</div>
+                        <div class="text-gray-300">Max Combo</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-400 mb-2" id="totalHits">0</div>
+                        <div class="text-gray-300">Perfect + Great + Good</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-red-400 mb-2" id="totalMisses">0</div>
+                        <div class="text-gray-300">Misses</div>
+                    </div>
+                </div>
+                
+                <div class="mb-8">
+                    <div class="text-center mb-4">
+                        <div class="text-2xl font-bold text-purple-400 mb-2" id="finalAccuracy">100%</div>
+                        <div class="text-gray-300">Accuracy</div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4 text-center text-sm">
+                        <div>
+                            <div class="text-lg font-bold text-green-300" id="perfectHits">0</div>
+                            <div class="text-gray-400">Perfect</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-blue-300" id="greatHits">0</div>
+                            <div class="text-gray-400">Great</div>
+                        </div>
+                        <div>
+                            <div class="text-lg font-bold text-yellow-300" id="goodHits">0</div>
+                            <div class="text-gray-400">Good</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center space-x-4">
+                    <button id="retryBtn" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-bold text-base">
+                        Try Again
+                    </button>
+                    <button id="nextLevelBtn" class="bg-green-600 hover:bg-green-700 px-8 py-3 rounded-lg font-bold text-base">
+                        Next Level
+                    </button>
+                    <button id="backToMenuBtn" class="bg-gray-600 hover:bg-gray-700 px-8 py-3 rounded-lg font-bold text-base">
+                        Main Menu
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RhythmGame {
+            constructor() {
+                this.audioContext = null;
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isCountingDown = false;
+                this.startTime = 0;
+                this.pausedTime = 0;
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.totalNotes = 0;
+                this.hitNotes = 0;
+                this.missedNotes = 0;
+                this.perfectHits = 0;
+                this.greatHits = 0;
+                this.goodHits = 0;
+                this.currentMap = 0;
+                this.notes = [];
+                this.activeNotes = new Set();
+                this.heldNotes = new Map();
+                this.lastTime = 0;
+                this.gameSpeed = 300;
+                this.hitWindow = 150;
+                this.gameState = 'menu'; // menu, playing, stats
+                
+                this.levelData = [
+                    { name: 'Easy Starter', bpm: 120, difficulty: 1 },
+                    { name: 'Gentle Flow', bpm: 130, difficulty: 2 },
+                    { name: 'Steady Beat', bpm: 140, difficulty: 2 },
+                    { name: 'Double Trouble', bpm: 135, difficulty: 2 },
+                    { name: 'Rhythm Walker', bpm: 145, difficulty: 3 },
+                    { name: 'Hold the Beat', bpm: 150, difficulty: 3 },
+                    { name: 'Crossover', bpm: 155, difficulty: 3 },
+                    { name: 'Syncopation', bpm: 160, difficulty: 4 },
+                    { name: 'Cascade', bpm: 165, difficulty: 4 },
+                    { name: 'Tempo Storm', bpm: 170, difficulty: 4 },
+                    { name: 'Lightning Fast', bpm: 180, difficulty: 5 },
+                    { name: 'Complex Maze', bpm: 185, difficulty: 5 },
+                    { name: 'Speed Master', bpm: 200, difficulty: 5 },
+                    { name: 'Chaos Theory', bpm: 210, difficulty: 5 },
+                    { name: 'Ultimate Test', bpm: 220, difficulty: 5 },
+                    // New Advanced Levels
+                    { name: 'Alternating Focus', bpm: 140, difficulty: 3 },
+                    { name: 'Polyrhythm Basic', bpm: 130, difficulty: 4 },
+                    { name: 'Acceleration Zone', bpm: 120, difficulty: 4 },
+                    { name: 'Hand Independence', bpm: 150, difficulty: 4 },
+                    { name: 'Burst Training', bpm: 160, difficulty: 4 },
+                    { name: 'Endurance Test', bpm: 140, difficulty: 5 },
+                    { name: 'Precision Timing', bpm: 135, difficulty: 5 },
+                    { name: 'Pattern Memory', bpm: 145, difficulty: 5 },
+                    { name: 'Galloping Rhythms', bpm: 155, difficulty: 5 },
+                    { name: 'Triplet Master', bpm: 140, difficulty: 5 },
+                    { name: 'Multi-Lane Chords', bpm: 125, difficulty: 6 },
+                    { name: 'Staggered Assault', bpm: 170, difficulty: 6 },
+                    { name: 'Rhythmic Labyrinth', bpm: 165, difficulty: 6 },
+                    { name: 'Evolution', bpm: 150, difficulty: 6 },
+                    { name: 'The Gauntlet', bpm: 200, difficulty: 6 }
+                ];
+                
+                this.initAudio();
+                this.initControls();
+                this.initTouchControls();
+                this.initMenuControls();
+                this.showMenu();
+            }
+
+            initAudio() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            playTone(frequency, duration = 0.1) {
+                if (!this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+                
+                oscillator.start(this.audioContext.currentTime);
+                oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            initMenuControls() {
+                // Level selection
+                document.querySelectorAll('.level-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const level = parseInt(card.dataset.level);
+                        this.selectLevel(level);
+                    });
+                });
+
+                // Stats screen controls
+                document.getElementById('retryBtn').addEventListener('click', () => {
+                    this.loadMap(this.currentMap);
+                    this.showGame();
+                });
+
+                document.getElementById('nextLevelBtn').addEventListener('click', () => {
+                    if (this.currentMap < this.levelData.length - 1) {
+                        this.selectLevel(this.currentMap + 1);
+                    } else {
+                        this.showMenu();
+                    }
+                });
+
+                document.getElementById('backToMenuBtn').addEventListener('click', () => {
+                    this.showMenu();
+                });
+            }
+
+            initControls() {
+                document.getElementById('playBtn').addEventListener('click', () => this.play());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pause());
+                document.getElementById('stopBtn').addEventListener('click', () => this.stop());
+                document.getElementById('menuBtn').addEventListener('click', () => this.showMenu());
+
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    if (this.gameState !== 'playing' || !this.isPlaying || this.isCountingDown) return;
+                    
+                    const lane = parseInt(e.key);
+                    if (lane >= 1 && lane <= 4) {
+                        this.handleInput(lane - 1, true);
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    if (this.gameState !== 'playing' || !this.isPlaying || this.isCountingDown) return;
+                    
+                    const lane = parseInt(e.key);
+                    if (lane >= 1 && lane <= 4) {
+                        this.handleInput(lane - 1, false);
+                    }
+                });
+            }
+
+            initTouchControls() {
+                for (let i = 1; i <= 4; i++) {
+                    const lane = document.getElementById(`lane${i}`);
+                    
+                    lane.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        if (this.gameState === 'playing' && this.isPlaying && !this.isCountingDown) {
+                            this.handleInput(i - 1, true);
+                        }
+                    });
+                    
+                    lane.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        if (this.gameState === 'playing' && this.isPlaying && !this.isCountingDown) {
+                            this.handleInput(i - 1, false);
+                        }
+                    });
+                    
+                    lane.addEventListener('mousedown', (e) => {
+                        if (this.gameState === 'playing' && this.isPlaying && !this.isCountingDown) {
+                            this.handleInput(i - 1, true);
+                        }
+                    });
+                    
+                    lane.addEventListener('mouseup', (e) => {
+                        if (this.gameState === 'playing' && this.isPlaying && !this.isCountingDown) {
+                            this.handleInput(i - 1, false);
+                        }
+                    });
+                }
+            }
+
+            showMenu() {
+                this.gameState = 'menu';
+                document.getElementById('menuScreen').classList.remove('hidden');
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('statsScreen').classList.add('hidden');
+                document.getElementById('countdownOverlay').classList.add('hidden');
+                this.stop();
+            }
+
+            showGame() {
+                this.gameState = 'playing';
+                document.getElementById('menuScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                document.getElementById('statsScreen').classList.add('hidden');
+                document.getElementById('countdownOverlay').classList.add('hidden');
+            }
+
+            showStats() {
+                this.gameState = 'stats';
+                document.getElementById('menuScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('statsScreen').classList.remove('hidden');
+                document.getElementById('countdownOverlay').classList.add('hidden');
+                
+                // Update stats display
+                document.getElementById('completedLevel').textContent = 
+                    `Level ${this.currentMap + 1} - ${this.levelData[this.currentMap].name}`;
+                document.getElementById('finalScore').textContent = this.score.toLocaleString();
+                document.getElementById('maxCombo').textContent = this.maxCombo;
+                document.getElementById('totalHits').textContent = this.hitNotes;
+                document.getElementById('totalMisses').textContent = this.missedNotes;
+                document.getElementById('perfectHits').textContent = this.perfectHits;
+                document.getElementById('greatHits').textContent = this.greatHits;
+                document.getElementById('goodHits').textContent = this.goodHits;
+                
+                const accuracy = this.totalNotes > 0 ? Math.round((this.hitNotes / this.totalNotes) * 100) : 100;
+                document.getElementById('finalAccuracy').textContent = `${accuracy}%`;
+                
+                // Hide next level button if on last level
+                const nextBtn = document.getElementById('nextLevelBtn');
+                if (this.currentMap >= this.levelData.length - 1) {
+                    nextBtn.style.display = 'none';
+                } else {
+                    nextBtn.style.display = 'inline-block';
+                }
+            }
+
+            selectLevel(level) {
+                this.currentMap = level;
+                this.loadMap(level);
+                this.showGame();
+                
+                // Update level info
+                document.getElementById('currentLevel').textContent = `Level ${level + 1}`;
+                document.getElementById('currentLevelName').textContent = this.levelData[level].name;
+            }
+
+            async startCountdown() {
+                return new Promise((resolve) => {
+                    this.isCountingDown = true;
+                    const overlay = document.getElementById('countdownOverlay');
+                    const numberElement = document.getElementById('countdownNumber');
+                    const levelPrepElement = document.getElementById('levelPrep');
+                    
+                    // Update countdown level info
+                    levelPrepElement.textContent = `Level ${this.currentMap + 1} - ${this.levelData[this.currentMap].name}`;
+                    
+                    overlay.classList.remove('hidden');
+                    
+                    let count = 3;
+                    const countdownInterval = setInterval(() => {
+                        numberElement.textContent = count;
+                        numberElement.classList.add('countdown-pulse');
+                        
+                        // Play countdown sound
+                        this.playTone(count === 0 ? 880 : 440, 0.2);
+                        
+                        // Remove animation class after animation completes
+                        setTimeout(() => {
+                            numberElement.classList.remove('countdown-pulse');
+                        }, 1000);
+                        
+                        count--;
+                        
+                        if (count < 0) {
+                            clearInterval(countdownInterval);
+                            
+                            // Show "GO!" briefly
+                            numberElement.textContent = 'GO!';
+                            numberElement.classList.add('countdown-pulse');
+                            this.playTone(880, 0.3);
+                            
+                            setTimeout(() => {
+                                overlay.classList.add('hidden');
+                                this.isCountingDown = false;
+                                resolve();
+                            }, 1000);
+                        }
+                    }, 1000);
+                });
+            }
+
+            async play() {
+                if (this.isPaused) {
+                    this.isPaused = false;
+                    this.startTime += Date.now() - this.pausedTime;
+                    this.isPlaying = true;
+                } else {
+                    // Start countdown before beginning the game
+                    await this.startCountdown();
+                    
+                    this.isPlaying = true;
+                    // Normal start time - notes will be offset in the patterns
+                    this.startTime = Date.now();
+                    this.clearNotes();
+                    this.resetScore();
+                }
+                
+                this.gameLoop();
+                this.updateButtons();
+            }
+
+            pause() {
+                if (this.isCountingDown) return; // Can't pause during countdown
+                
+                this.isPaused = true;
+                this.isPlaying = false;
+                this.pausedTime = Date.now();
+                this.updateButtons();
+            }
+
+            stop() {
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isCountingDown = false;
+                document.getElementById('countdownOverlay').classList.add('hidden');
+                this.clearNotes();
+                this.updateButtons();
+            }
+
+            updateButtons() {
+                document.getElementById('playBtn').disabled = this.isPlaying || this.isCountingDown;
+                document.getElementById('pauseBtn').disabled = !this.isPlaying || this.isCountingDown;
+                document.getElementById('stopBtn').disabled = !this.isPlaying && !this.isPaused && !this.isCountingDown;
+            }
+
+            gameLoop() {
+                if (!this.isPlaying || this.isCountingDown) return;
+                
+                const currentTime = Date.now() - this.startTime;
+                this.spawnNotes(currentTime);
+                this.updateNotes(currentTime);
+                this.checkMissedNotes(currentTime);
+                this.checkLevelComplete(currentTime);
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+
+            checkLevelComplete(currentTime) {
+                const lastNoteTime = Math.max(...this.notes.map(note => 
+                    note.time + (note.duration || 0)
+                ));
+                
+                if (currentTime > lastNoteTime + 2000 && this.activeNotes.size === 0) {
+                    this.isPlaying = false;
+                    this.showStats();
+                }
+            }
+
+            spawnNotes(currentTime) {
+                const spawnTime = 2000;
+                
+                this.notes.forEach((note, index) => {
+                    if (!note.spawned && note.time - currentTime <= spawnTime) {
+                        this.createNoteElement(note, index);
+                        note.spawned = true;
+                    }
+                });
+            }
+
+            createNoteElement(noteData, index) {
+                const note = document.createElement('div');
+                note.className = `note absolute w-12 rounded-lg shadow-lg ${
+                    noteData.type === 'hold' ? 'hold-note' : 'single-note'
+                }`;
+                note.style.left = '50%';
+                note.style.transform = 'translateX(-50%)';
+                note.style.top = '-40px';
+                note.dataset.index = index;
+                note.dataset.lane = noteData.lane;
+                note.dataset.type = noteData.type;
+                
+                if (noteData.type === 'hold') {
+                    note.dataset.duration = noteData.duration;
+                    const holdHeight = Math.max(40, (noteData.duration / 1000) * this.gameSpeed / 8);
+                    note.style.height = `${holdHeight}px`;
+                } else {
+                    note.style.height = '20px';
+                }
+                
+                const lane = document.getElementById(`lane${noteData.lane + 1}`);
+                lane.appendChild(note);
+                this.activeNotes.add(note);
+            }
+
+            updateNotes(currentTime) {
+                const notesToRemove = [];
+                this.activeNotes.forEach(note => {
+                    const index = parseInt(note.dataset.index);
+                    const noteData = this.notes[index];
+                    const noteTime = noteData.time;
+                    
+                    const progress = (currentTime - (noteTime - 2000)) / 2000;
+                    const yPosition = progress * (window.innerHeight - 100);
+                    
+                    note.style.top = `${yPosition}px`;
+                    
+                    if (yPosition > window.innerHeight) {
+                        if (note.dataset.type !== 'hold' || !this.heldNotes.has(note)) {
+                            if (!note.classList.contains('hit') && !note.dataset.missed) {
+                                note.dataset.missed = 'true';
+                                this.missNote();
+                            }
+                        }
+                        notesToRemove.push(note);
+                    }
+                });
+                
+                notesToRemove.forEach(note => this.removeNote(note));
+            }
+
+            checkMissedNotes(currentTime) {
+                const notesToRemove = [];
+                this.activeNotes.forEach(note => {
+                    const index = parseInt(note.dataset.index);
+                    const noteData = this.notes[index];
+                    
+                    if (currentTime > noteData.time + this.hitWindow && 
+                        note.dataset.type !== 'hold' && 
+                        !note.classList.contains('hit') &&
+                        !note.dataset.missed) {
+                        note.dataset.missed = 'true';
+                        this.missNote();
+                        notesToRemove.push(note);
+                    }
+                });
+                
+                notesToRemove.forEach(note => this.removeNote(note));
+            }
+
+            handleInput(lane, isPress) {
+                if (isPress) {
+                    this.handlePress(lane);
+                } else {
+                    this.handleRelease(lane);
+                }
+            }
+
+            handlePress(lane) {
+                const currentTime = Date.now() - this.startTime;
+                let bestNote = null;
+                let bestDistance = Infinity;
+                
+                this.activeNotes.forEach(note => {
+                    if (parseInt(note.dataset.lane) === lane && 
+                        !note.classList.contains('hit') && 
+                        !note.dataset.missed &&
+                        !note.dataset.processed) {
+                        const index = parseInt(note.dataset.index);
+                        const noteData = this.notes[index];
+                        const distance = Math.abs(currentTime - noteData.time);
+                        
+                        if (distance < this.hitWindow && distance < bestDistance) {
+                            bestNote = note;
+                            bestDistance = distance;
+                        }
+                    }
+                });
+                
+                if (bestNote) {
+                    bestNote.dataset.processed = 'true';
+                    this.hitNote(bestNote, bestDistance);
+                    
+                    if (bestNote.dataset.type === 'hold') {
+                        this.heldNotes.set(bestNote, currentTime);
+                    }
+                }
+                
+                const frequencies = [261.63, 329.63, 392.00, 523.25];
+                this.playTone(frequencies[lane]);
+            }
+
+            handleRelease(lane) {
+                const currentTime = Date.now() - this.startTime;
+                const toRemove = [];
+                
+                this.heldNotes.forEach((startTime, note) => {
+                    if (parseInt(note.dataset.lane) === lane) {
+                        const duration = currentTime - startTime;
+                        const requiredDuration = parseInt(note.dataset.duration);
+                        
+                        if (duration >= requiredDuration * 0.8) {
+                            this.addScore(150, 'HOLD COMPLETE');
+                            this.hitNotes++;
+                        } else {
+                            this.addScore(50, 'HOLD SHORT');
+                            this.combo = 0;
+                        }
+                        
+                        toRemove.push(note);
+                    }
+                });
+                
+                toRemove.forEach(note => {
+                    this.removeNote(note);
+                    this.heldNotes.delete(note);
+                });
+            }
+
+            hitNote(note, distance) {
+                note.classList.add('hit');
+                
+                let score = 100;
+                let text = 'GOOD';
+                
+                if (distance < 50) {
+                    score = 200;
+                    text = 'PERFECT';
+                    this.perfectHits++;
+                } else if (distance < 100) {
+                    score = 150;
+                    text = 'GREAT';
+                    this.greatHits++;
+                } else {
+                    this.goodHits++;
+                }
+                
+                this.addScore(score, text);
+                this.hitNotes++;
+                this.combo++;
+                this.maxCombo = Math.max(this.maxCombo, this.combo);
+                
+                if (note.dataset.type === 'single') {
+                    setTimeout(() => this.removeNote(note), 300);
+                }
+            }
+
+            missNote() {
+                this.combo = 0;
+                this.missedNotes++;
+                this.showScorePopup('MISS', 'text-red-400');
+                this.updateUI();
+            }
+
+            addScore(points, text) {
+                const comboMultiplier = Math.floor(this.combo / 10) + 1;
+                const finalScore = points * comboMultiplier;
+                this.score += finalScore;
+                
+                this.showScorePopup(`+${finalScore} ${text}`, 'text-green-400');
+                this.updateUI();
+            }
+
+            showScorePopup(text, className) {
+                const popup = document.createElement('div');
+                popup.className = `score-popup absolute text-lg font-bold pointer-events-none ${className}`;
+                popup.textContent = text;
+                popup.style.left = '50%';
+                popup.style.top = '50%';
+                popup.style.transform = 'translate(-50%, -50%)';
+                
+                document.getElementById('scorePopups').appendChild(popup);
+                
+                setTimeout(() => popup.remove(), 800);
+            }
+
+            removeNote(note) {
+                this.activeNotes.delete(note);
+                this.heldNotes.delete(note);
+                note.remove();
+            }
+
+            updateUI() {
+                document.getElementById('score').textContent = this.score.toLocaleString();
+                document.getElementById('combo').textContent = this.combo;
+                
+                const accuracy = this.totalNotes > 0 ? Math.round((this.hitNotes / (this.hitNotes + this.missedNotes)) * 100) : 100;
+                document.getElementById('accuracy').textContent = `${accuracy}%`;
+            }
+
+            generateMap(mapId) {
+                const maps = [
+                    { bpm: 120, notes: this.generateEasyPattern() },           // Level 1
+                    { bpm: 130, notes: this.generateGentlePattern() },         // Level 2
+                    { bpm: 140, notes: this.generateSteadyPattern() },         // Level 3
+                    { bpm: 135, notes: this.generateDoubleTroublePattern() },  // Level 4
+                    { bpm: 145, notes: this.generateRhythmWalkerPattern() },   // Level 5
+                    { bpm: 150, notes: this.generateHoldTheBeatPattern() },    // Level 6
+                    { bpm: 155, notes: this.generateCrossoverPattern() },      // Level 7
+                    { bpm: 160, notes: this.generateSyncopationPattern() },    // Level 8
+                    { bpm: 165, notes: this.generateCascadePattern() },        // Level 9
+                    { bpm: 170, notes: this.generateTempoStormPattern() },     // Level 10
+                    { bpm: 180, notes: this.generateFastPattern() },           // Level 11
+                    { bpm: 185, notes: this.generateComplexPattern() },        // Level 12
+                    { bpm: 200, notes: this.generateSpeedPattern() },          // Level 13
+                    { bpm: 210, notes: this.generateChaosTheoryPattern() },    // Level 14
+                    { bpm: 220, notes: this.generateUltimatePattern() },       // Level 15
+                    // New Advanced Levels 16-30
+                    { bpm: 140, notes: this.generateAlternatingFocusPattern() },    // Level 16
+                    { bpm: 130, notes: this.generatePolyrhythmBasicPattern() },     // Level 17
+                    { bpm: 120, notes: this.generateAccelerationZonePattern() },    // Level 18
+                    { bpm: 150, notes: this.generateHandIndependencePattern() },    // Level 19
+                    { bpm: 160, notes: this.generateBurstTrainingPattern() },       // Level 20
+                    { bpm: 140, notes: this.generateEnduranceTestPattern() },       // Level 21
+                    { bpm: 135, notes: this.generatePrecisionTimingPattern() },     // Level 22
+                    { bpm: 145, notes: this.generatePatternMemoryPattern() },       // Level 23
+                    { bpm: 155, notes: this.generateGallopingRhythmsPattern() },    // Level 24
+                    { bpm: 140, notes: this.generateTripletMasterPattern() },       // Level 25
+                    { bpm: 125, notes: this.generateMultiLaneChordsPattern() },     // Level 26
+                    { bpm: 170, notes: this.generateStaggeredAssaultPattern() },    // Level 27
+                    { bpm: 165, notes: this.generateRhythmicLabyrinthPattern() },   // Level 28
+                    { bpm: 150, notes: this.generateEvolutionPattern() },           // Level 29
+                    { bpm: 200, notes: this.generateTheGauntletPattern() }          // Level 30
+                ];
+                
+                return maps[mapId] || maps[0];
+            }
+
+            // Pattern generation methods - all patterns start at 3000ms to give reaction time
+            generateEasyPattern() {
+                const notes = [];
+                const startDelay = 3000; // 3 second delay for player preparation
+                for (let i = 0; i < 16; i++) {
+                    notes.push({
+                        time: startDelay + i * 1000,
+                        lane: i % 4,
+                        type: 'single'
+                    });
+                }
+                return notes;
+            }
+
+            generateGentlePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                const pattern = [0, 1, 2, 3, 1, 3, 0, 2];
+                for (let i = 0; i < 24; i++) {
+                    notes.push({
+                        time: startDelay + i * 750,
+                        lane: pattern[i % pattern.length],
+                        type: i % 8 === 7 ? 'hold' : 'single',
+                        duration: i % 8 === 7 ? 1000 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateSteadyPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 32; i++) {
+                    if (i % 4 === 0) {
+                        notes.push({ time: startDelay + i * 500, lane: 0, type: 'single' });
+                        notes.push({ time: startDelay + i * 500 + 100, lane: 2, type: 'single' });
+                    } else if (i % 4 === 2) {
+                        notes.push({ time: startDelay + i * 500, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 500 + 100, lane: 3, type: 'single' });
+                    } else if (i % 8 === 1) {
+                        notes.push({ time: startDelay + i * 500, lane: (i % 4), type: 'hold', duration: 1200 });
+                    }
+                }
+                return notes;
+            }
+
+            generateDoubleTroublePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 25; i++) {
+                    // Dual lane patterns
+                    if (i % 2 === 0) {
+                        notes.push({ time: startDelay + i * 600, lane: 0, type: 'single' });
+                        notes.push({ time: startDelay + i * 600 + 150, lane: 1, type: 'single' });
+                    } else {
+                        notes.push({ time: startDelay + i * 600, lane: 2, type: 'single' });
+                        notes.push({ time: startDelay + i * 600 + 150, lane: 3, type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generateRhythmWalkerPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 32; i++) {
+                    // Walking pattern across lanes
+                    const walkPattern = [0, 1, 2, 3, 2, 1];
+                    notes.push({
+                        time: startDelay + i * 450,
+                        lane: walkPattern[i % walkPattern.length],
+                        type: i % 6 === 5 ? 'hold' : 'single',
+                        duration: i % 6 === 5 ? 900 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateHoldTheBeatPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 28; i++) {
+                    if (i % 4 === 0) {
+                        // Start a hold note
+                        notes.push({ time: startDelay + i * 500, lane: 0, type: 'hold', duration: 1500 });
+                    } else if (i % 4 === 1) {
+                        notes.push({ time: startDelay + i * 500, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 500 + 250, lane: 2, type: 'single' });
+                    } else if (i % 4 === 2) {
+                        notes.push({ time: startDelay + i * 500, lane: 3, type: 'hold', duration: 1000 });
+                    } else {
+                        notes.push({ time: startDelay + i * 500, lane: 1, type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generateCrossoverPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 35; i++) {
+                    // Cross-lane patterns
+                    if (i % 5 === 0) {
+                        notes.push({ time: startDelay + i * 400, lane: 0, type: 'single' });
+                        notes.push({ time: startDelay + i * 400 + 100, lane: 3, type: 'single' });
+                    } else if (i % 5 === 1) {
+                        notes.push({ time: startDelay + i * 400, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 400 + 100, lane: 2, type: 'single' });
+                    } else if (i % 5 === 2) {
+                        notes.push({ time: startDelay + i * 400, lane: 3, type: 'single' });
+                        notes.push({ time: startDelay + i * 400 + 100, lane: 0, type: 'single' });
+                    } else if (i % 5 === 3) {
+                        notes.push({ time: startDelay + i * 400, lane: 2, type: 'single' });
+                        notes.push({ time: startDelay + i * 400 + 100, lane: 1, type: 'single' });
+                    } else {
+                        notes.push({ time: startDelay + i * 400, lane: (i % 4), type: 'hold', duration: 800 });
+                    }
+                }
+                return notes;
+            }
+
+            generateSyncopationPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 40; i++) {
+                    // Off-beat rhythms
+                    if (i % 3 === 0) {
+                        notes.push({ time: startDelay + i * 375, lane: 0, type: 'single' });
+                    } else if (i % 3 === 1) {
+                        notes.push({ time: startDelay + i * 375 + 125, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 375 + 250, lane: 2, type: 'single' });
+                    } else {
+                        notes.push({ time: startDelay + i * 375, lane: 3, type: 'hold', duration: 750 });
+                    }
+                }
+                return notes;
+            }
+
+            generateCascadePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 45; i++) {
+                    // Flowing cascade pattern
+                    if (i % 6 === 0) {
+                        notes.push({ time: startDelay + i * 330, lane: 0, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 82, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 164, lane: 2, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 246, lane: 3, type: 'single' });
+                    } else if (i % 6 === 3) {
+                        notes.push({ time: startDelay + i * 330, lane: 3, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 82, lane: 2, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 164, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 330 + 246, lane: 0, type: 'single' });
+                    } else if (i % 6 === 5) {
+                        notes.push({ time: startDelay + i * 330, lane: (i % 4), type: 'hold', duration: 660 });
+                    }
+                }
+                return notes;
+            }
+
+            generateTempoStormPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 50; i++) {
+                    // Variable tempo with complex holds
+                    const baseTime = startDelay + i * 300;
+                    if (i % 8 === 0) {
+                        notes.push({ time: baseTime, lane: 0, type: 'hold', duration: 1200 });
+                        notes.push({ time: baseTime + 300, lane: 1, type: 'single' });
+                        notes.push({ time: baseTime + 600, lane: 2, type: 'single' });
+                    } else if (i % 8 === 2) {
+                        notes.push({ time: baseTime, lane: 3, type: 'hold', duration: 900 });
+                        notes.push({ time: baseTime + 150, lane: 1, type: 'single' });
+                    } else if (i % 8 === 4) {
+                        notes.push({ time: baseTime, lane: 2, type: 'single' });
+                        notes.push({ time: baseTime + 100, lane: 0, type: 'single' });
+                        notes.push({ time: baseTime + 200, lane: 3, type: 'single' });
+                    } else if (i % 8 === 6) {
+                        notes.push({ time: baseTime, lane: 1, type: 'hold', duration: 600 });
+                    }
+                }
+                return notes;
+            }
+
+            generateFastPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                const usedLanes = new Map();
+                
+                for (let i = 0; i < 60; i++) {
+                    const currentTime = startDelay + i * 300;
+                    let lane;
+                    
+                    // Find an available lane
+                    do {
+                        lane = Math.floor(Math.random() * 4);
+                    } while (usedLanes.has(`${currentTime}-${lane}`));
+                    
+                    const isHold = Math.random() < 0.2;
+                    const note = {
+                        time: currentTime,
+                        lane: lane,
+                        type: isHold ? 'hold' : 'single',
+                        duration: isHold ? 600 : undefined
+                    };
+                    
+                    notes.push(note);
+                    usedLanes.set(`${currentTime}-${lane}`, true);
+                    
+                    // Reserve lane for hold duration
+                    if (isHold) {
+                        for (let j = 1; j <= 2; j++) {
+                            usedLanes.set(`${currentTime + j * 300}-${lane}`, true);
+                        }
+                    }
+                }
+                return notes;
+            }
+
+            generateComplexPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 40; i++) {
+                    if (i % 4 === 0) {
+                        notes.push({ time: startDelay + i * 250, lane: 0, type: 'single' });
+                        notes.push({ time: startDelay + i * 250 + 100, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 250 + 200, lane: 2, type: 'single' });
+                    } else if (i % 4 === 1) {
+                        notes.push({ time: startDelay + i * 250, lane: 3, type: 'single' });
+                        notes.push({ time: startDelay + i * 250 + 100, lane: 2, type: 'single' });
+                    } else if (i % 4 === 2) {
+                        notes.push({ time: startDelay + i * 250, lane: 1, type: 'single' });
+                        notes.push({ time: startDelay + i * 250 + 100, lane: 0, type: 'single' });
+                    } else {
+                        notes.push({ time: startDelay + i * 250, lane: (i % 4), type: 'hold', duration: 600 });
+                    }
+                }
+                return notes;
+            }
+
+            generateSpeedPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 60; i++) {
+                    if (i % 4 === 0) {
+                        notes.push({ time: startDelay + i * 250, lane: 0, type: 'single' });
+                    } else if (i % 4 === 1) {
+                        notes.push({ time: startDelay + i * 250, lane: 1, type: 'single' });
+                    } else if (i % 4 === 2) {
+                        notes.push({ time: startDelay + i * 250, lane: 2, type: 'single' });
+                    } else {
+                        const isHold = Math.random() < 0.3;
+                        notes.push({
+                            time: startDelay + i * 250,
+                            lane: 3,
+                            type: isHold ? 'hold' : 'single',
+                            duration: isHold ? 500 : undefined
+                        });
+                    }
+                }
+                return notes;
+            }
+
+            generateChaosTheoryPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                const usedTimes = new Set();
+                
+                for (let i = 0; i < 80; i++) {
+                    const baseTime = startDelay + i * 180;
+                    const chaos = Math.random();
+                    
+                    if (chaos < 0.3) {
+                        // Single note
+                        const lane = Math.floor(Math.random() * 4);
+                        if (!usedTimes.has(`${baseTime}-${lane}`)) {
+                            notes.push({ time: baseTime, lane: lane, type: 'single' });
+                            usedTimes.add(`${baseTime}-${lane}`);
+                        }
+                    } else if (chaos < 0.6) {
+                        // Two notes
+                        const lane1 = Math.floor(Math.random() * 4);
+                        let lane2 = Math.floor(Math.random() * 4);
+                        while (lane2 === lane1) lane2 = Math.floor(Math.random() * 4);
+                        
+                        notes.push({ time: baseTime, lane: lane1, type: 'single' });
+                        notes.push({ time: baseTime + 90, lane: lane2, type: 'single' });
+                    } else {
+                        // Hold note
+                        const lane = Math.floor(Math.random() * 4);
+                        const duration = 360 + Math.random() * 540;
+                        notes.push({ time: baseTime, lane: lane, type: 'hold', duration: duration });
+                    }
+                }
+                return notes.sort((a, b) => a.time - b.time);
+            }
+
+            generateUltimatePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                for (let i = 0; i < 100; i++) {
+                    const numNotes = Math.random() < 0.3 ? 2 : 1;
+                    const usedLanes = new Set();
+                    
+                    for (let j = 0; j < numNotes; j++) {
+                        let lane;
+                        do {
+                            lane = Math.floor(Math.random() * 4);
+                        } while (usedLanes.has(lane));
+                        usedLanes.add(lane);
+                        
+                        notes.push({
+                            time: startDelay + i * 180,
+                            lane: lane,
+                            type: Math.random() < 0.7 ? 'single' : 'hold',
+                            duration: Math.random() < 0.7 ? undefined : 300 + Math.random() * 600
+                        });
+                    }
+                }
+                return notes.sort((a, b) => a.time - b.time);
+            }
+
+            loadMap(mapId) {
+                this.currentMap = mapId;
+                const mapData = this.generateMap(mapId);
+                this.notes = mapData.notes;
+                this.totalNotes = this.notes.length;
+                this.clearNotes();
+                this.resetScore();
+            }
+
+            clearNotes() {
+                document.querySelectorAll('.note').forEach(note => note.remove());
+                this.activeNotes.clear();
+                this.heldNotes.clear();
+            }
+
+            resetScore() {
+                this.score = 0;
+                this.combo = 0;
+                this.maxCombo = 0;
+                this.hitNotes = 0;
+                this.missedNotes = 0;
+                this.perfectHits = 0;
+                this.greatHits = 0;
+                this.goodHits = 0;
+                this.updateUI();
+            }
+
+            // New Advanced Pattern Generation Functions
+
+            generateAlternatingFocusPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Left-right alternating patterns
+                for (let i = 0; i < 40; i++) {
+                    if (i % 8 < 4) {
+                        // Focus on left side (lanes 0,1)
+                        notes.push({ time: startDelay + i * 400, lane: i % 2, type: 'single' });
+                    } else {
+                        // Focus on right side (lanes 2,3)
+                        notes.push({ time: startDelay + i * 400, lane: 2 + (i % 2), type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generatePolyrhythmBasicPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Two different rhythms simultaneously
+                for (let i = 0; i < 32; i++) {
+                    // Fast rhythm on lanes 0,1
+                    if (i % 2 === 0) {
+                        notes.push({ time: startDelay + i * 300, lane: i % 2, type: 'single' });
+                    }
+                    // Slower rhythm on lanes 2,3
+                    if (i % 3 === 0) {
+                        notes.push({ time: startDelay + i * 300, lane: 2 + (i % 2), type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generateAccelerationZonePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Gradually accelerating pattern
+                for (let i = 0; i < 50; i++) {
+                    const accelerationFactor = 1 - (i / 100); // Start slow, get faster
+                    const noteInterval = 600 * accelerationFactor + 200; // 600ms to 200ms
+                    const currentTime = startDelay + (i * noteInterval);
+                    
+                    notes.push({
+                        time: currentTime,
+                        lane: i % 4,
+                        type: i % 8 === 7 ? 'hold' : 'single',
+                        duration: i % 8 === 7 ? 400 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateHandIndependencePattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Different patterns for left (0,1) and right (2,3) hands
+                for (let i = 0; i < 48; i++) {
+                    if (i % 6 < 3) {
+                        // Left hand: steady rhythm
+                        notes.push({ time: startDelay + i * 250, lane: i % 2, type: 'single' });
+                    } else {
+                        // Right hand: syncopated rhythm
+                        notes.push({ time: startDelay + i * 250 + 125, lane: 2 + (i % 2), type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generateBurstTrainingPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Intense bursts followed by recovery
+                for (let i = 0; i < 20; i++) {
+                    const burstStart = startDelay + i * 2000;
+                    
+                    // Burst phase (fast notes for 800ms)
+                    for (let j = 0; j < 8; j++) {
+                        notes.push({
+                            time: burstStart + j * 100,
+                            lane: Math.floor(Math.random() * 4),
+                            type: 'single'
+                        });
+                    }
+                    
+                    // Recovery phase (one hold note)
+                    notes.push({
+                        time: burstStart + 1200,
+                        lane: i % 4,
+                        type: 'hold',
+                        duration: 600
+                    });
+                }
+                return notes;
+            }
+
+            generateEnduranceTestPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Long sustained pattern to test stamina
+                for (let i = 0; i < 120; i++) {
+                    const pattern = [0, 1, 2, 3, 2, 1, 0, 3];
+                    notes.push({
+                        time: startDelay + i * 350,
+                        lane: pattern[i % pattern.length],
+                        type: i % 12 === 11 ? 'hold' : 'single',
+                        duration: i % 12 === 11 ? 800 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generatePrecisionTimingPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Tight timing windows with irregular spacing
+                const timings = [0, 150, 300, 500, 650, 900, 1050, 1250];
+                for (let i = 0; i < 32; i++) {
+                    const baseTime = startDelay + Math.floor(i / 8) * 2000;
+                    const timing = timings[i % timings.length];
+                    
+                    notes.push({
+                        time: baseTime + timing,
+                        lane: i % 4,
+                        type: 'single'
+                    });
+                }
+                return notes;
+            }
+
+            generatePatternMemoryPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Complex repeating pattern
+                const complexPattern = [0, 2, 1, 3, 0, 1, 3, 2, 1, 0, 2, 3];
+                const timingPattern = [0, 200, 400, 600, 800, 1000, 1200, 1400, 1600, 1800, 2000, 2200];
+                
+                // Repeat the pattern 4 times
+                for (let repeat = 0; repeat < 4; repeat++) {
+                    for (let i = 0; i < complexPattern.length; i++) {
+                        notes.push({
+                            time: startDelay + repeat * 3000 + timingPattern[i],
+                            lane: complexPattern[i],
+                            type: i % 6 === 5 ? 'hold' : 'single',
+                            duration: i % 6 === 5 ? 600 : undefined
+                        });
+                    }
+                }
+                return notes;
+            }
+
+            generateGallopingRhythmsPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Classic gallop pattern: da-da-DUM da-da-DUM
+                for (let i = 0; i < 24; i++) {
+                    const gallopStart = startDelay + i * 750;
+                    
+                    // First two quick notes
+                    notes.push({ time: gallopStart, lane: i % 4, type: 'single' });
+                    notes.push({ time: gallopStart + 150, lane: (i + 1) % 4, type: 'single' });
+                    
+                    // Strong beat
+                    notes.push({ 
+                        time: gallopStart + 375, 
+                        lane: (i + 2) % 4, 
+                        type: i % 4 === 3 ? 'hold' : 'single',
+                        duration: i % 4 === 3 ? 500 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateTripletMasterPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Three-note groupings
+                for (let i = 0; i < 40; i++) {
+                    const tripletStart = startDelay + Math.floor(i / 3) * 600;
+                    const tripletPos = i % 3;
+                    
+                    notes.push({
+                        time: tripletStart + tripletPos * 150,
+                        lane: (Math.floor(i / 3) + tripletPos) % 4,
+                        type: tripletPos === 2 && i % 9 === 8 ? 'hold' : 'single',
+                        duration: tripletPos === 2 && i % 9 === 8 ? 400 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateMultiLaneChordsPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Multiple simultaneous notes (chords)
+                for (let i = 0; i < 24; i++) {
+                    const chordTime = startDelay + i * 1000;
+                    
+                    if (i % 4 === 0) {
+                        // Two-note chord
+                        notes.push({ time: chordTime, lane: 0, type: 'single' });
+                        notes.push({ time: chordTime, lane: 2, type: 'single' });
+                    } else if (i % 4 === 2) {
+                        // Three-note chord
+                        notes.push({ time: chordTime, lane: 0, type: 'single' });
+                        notes.push({ time: chordTime, lane: 1, type: 'single' });
+                        notes.push({ time: chordTime, lane: 3, type: 'single' });
+                    } else if (i % 8 === 7) {
+                        // Hold chord
+                        notes.push({ time: chordTime, lane: 1, type: 'hold', duration: 800 });
+                        notes.push({ time: chordTime, lane: 2, type: 'hold', duration: 800 });
+                    } else {
+                        // Single note
+                        notes.push({ time: chordTime, lane: i % 4, type: 'single' });
+                    }
+                }
+                return notes;
+            }
+
+            generateStaggeredAssaultPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Notes offset by tiny amounts
+                for (let i = 0; i < 60; i++) {
+                    const baseTime = startDelay + Math.floor(i / 4) * 400;
+                    const stagger = (i % 4) * 25; // 25ms stagger
+                    
+                    notes.push({
+                        time: baseTime + stagger,
+                        lane: i % 4,
+                        type: i % 16 === 15 ? 'hold' : 'single',
+                        duration: i % 16 === 15 ? 600 : undefined
+                    });
+                }
+                return notes;
+            }
+
+            generateRhythmicLabyrinthPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Ever-changing rhythm patterns
+                const rhythmSets = [
+                    [200, 200, 400], // Fast-fast-slow
+                    [400, 200, 200], // Slow-fast-fast
+                    [300, 300, 300], // Even
+                    [150, 150, 150, 450], // Triple-long
+                    [100, 300, 100, 300] // Syncopated
+                ];
+                
+                let currentTime = startDelay;
+                for (let set = 0; set < 12; set++) {
+                    const rhythm = rhythmSets[set % rhythmSets.length];
+                    for (let i = 0; i < rhythm.length; i++) {
+                        notes.push({
+                            time: currentTime,
+                            lane: (set * rhythm.length + i) % 4,
+                            type: i === rhythm.length - 1 && set % 3 === 2 ? 'hold' : 'single',
+                            duration: i === rhythm.length - 1 && set % 3 === 2 ? 500 : undefined
+                        });
+                        currentTime += rhythm[i];
+                    }
+                }
+                return notes;
+            }
+
+            generateEvolutionPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Pattern that evolves over time
+                for (let phase = 0; phase < 4; phase++) {
+                    for (let i = 0; i < 16; i++) {
+                        const baseTime = startDelay + phase * 4000 + i * 250;
+                        
+                        if (phase === 0) {
+                            // Simple single notes
+                            notes.push({ time: baseTime, lane: i % 4, type: 'single' });
+                        } else if (phase === 1) {
+                            // Add some holds
+                            notes.push({ 
+                                time: baseTime, 
+                                lane: i % 4, 
+                                type: i % 4 === 3 ? 'hold' : 'single',
+                                duration: i % 4 === 3 ? 500 : undefined
+                            });
+                        } else if (phase === 2) {
+                            // Add complexity with double notes
+                            notes.push({ time: baseTime, lane: i % 4, type: 'single' });
+                            if (i % 2 === 1) {
+                                notes.push({ time: baseTime + 125, lane: (i + 2) % 4, type: 'single' });
+                            }
+                        } else {
+                            // Full complexity with chords and holds
+                            notes.push({ time: baseTime, lane: i % 4, type: i % 3 === 2 ? 'hold' : 'single', duration: i % 3 === 2 ? 400 : undefined });
+                            if (i % 4 === 0) {
+                                notes.push({ time: baseTime, lane: (i + 2) % 4, type: 'single' });
+                            }
+                        }
+                    }
+                }
+                return notes;
+            }
+
+            generateTheGauntletPattern() {
+                const notes = [];
+                const startDelay = 3000;
+                // Ultimate test combining multiple techniques
+                
+                // Section 1: Speed test
+                for (let i = 0; i < 20; i++) {
+                    notes.push({ time: startDelay + i * 150, lane: i % 4, type: 'single' });
+                }
+                
+                // Section 2: Hold management
+                let currentTime = startDelay + 3000;
+                for (let i = 0; i < 8; i++) {
+                    notes.push({ time: currentTime + i * 500, lane: 0, type: 'hold', duration: 2000 });
+                    notes.push({ time: currentTime + i * 500 + 250, lane: (i % 3) + 1, type: 'single' });
+                }
+                
+                // Section 3: Chord progression
+                currentTime += 4000;
+                for (let i = 0; i < 12; i++) {
+                    const chordTime = currentTime + i * 400;
+                    notes.push({ time: chordTime, lane: 0, type: 'single' });
+                    notes.push({ time: chordTime, lane: 2, type: 'single' });
+                    if (i % 3 === 2) {
+                        notes.push({ time: chordTime, lane: 1, type: 'single' });
+                        notes.push({ time: chordTime, lane: 3, type: 'single' });
+                    }
+                }
+                
+                // Section 4: Chaos finale
+                currentTime += 5000;
+                for (let i = 0; i < 40; i++) {
+                    const chaosTime = currentTime + i * 100 + Math.random() * 50;
+                    notes.push({
+                        time: chaosTime,
+                        lane: Math.floor(Math.random() * 4),
+                        type: Math.random() < 0.8 ? 'single' : 'hold',
+                        duration: Math.random() < 0.8 ? undefined : 300
+                    });
+                }
+                
+                return notes.sort((a, b) => a.time - b.time);
+            }
+        }
+
+        // Initialize game
+        const game = new RhythmGame();
+    </script>
+</body>
+</html>
