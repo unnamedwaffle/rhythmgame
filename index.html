@@ -101,11 +101,14 @@
     <!-- Menu Screen -->
     <div id="menuScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 overflow-y-auto">
         <div class="flex flex-col items-center justify-center min-h-screen p-4 py-8">
-            <div class="text-center mb-12">
+            <div class="text-center mb-8">
                 <h1 class="text-6xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                     Rhythm Master
                 </h1>
-                <p class="text-xl text-gray-300">Choose your challenge</p>
+                <p class="text-xl text-gray-300 mb-4">Choose your challenge</p>
+                <button id="tutorialBtn" class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-bold text-base mb-4">
+                    📚 How to Play
+                </button>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl w-full">
@@ -414,6 +417,108 @@
         </div>
     </div>
 
+    <!-- Tutorial Screen -->
+    <div id="tutorialScreen" class="hidden fixed inset-0 z-50 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-y-auto">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="stats-card rounded-2xl p-8 max-w-4xl w-full border border-gray-600">
+                <div class="text-center mb-8">
+                    <h2 class="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        How to Play
+                    </h2>
+                    <p class="text-xl text-gray-300">Master the rhythm and become a legend!</p>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <!-- Basic Controls -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-2xl font-bold text-yellow-400 mb-4">🎮 Controls</h3>
+                        <div class="space-y-3 text-gray-300">
+                            <div class="flex items-center">
+                                <span class="font-bold text-white mr-2">Desktop:</span>
+                                Press keys 1, 2, 3, 4
+                            </div>
+                            <div class="flex items-center">
+                                <span class="font-bold text-white mr-2">Mobile:</span>
+                                Tap the lanes directly
+                            </div>
+                            <div class="text-sm text-gray-400">
+                                Each lane corresponds to a different key/area
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Note Types -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-2xl font-bold text-blue-400 mb-4">🎵 Note Types</h3>
+                        <div class="space-y-3">
+                            <div class="flex items-center">
+                                <div class="w-6 h-4 bg-gradient-to-r from-blue-500 to-blue-600 rounded mr-3"></div>
+                                <span class="text-gray-300"><strong>Blue Notes:</strong> Tap quickly</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-6 h-8 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded mr-3"></div>
+                                <span class="text-gray-300"><strong>Yellow Notes:</strong> Hold down</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Timing -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-2xl font-bold text-green-400 mb-4">⏰ Timing</h3>
+                        <div class="space-y-3 text-gray-300">
+                            <div><strong class="text-green-300">Perfect:</strong> Hit exactly on time (+200 points)</div>
+                            <div><strong class="text-blue-300">Great:</strong> Very close timing (+150 points)</div>
+                            <div><strong class="text-yellow-300">Good:</strong> Acceptable timing (+100 points)</div>
+                            <div><strong class="text-red-300">Miss:</strong> Breaks your combo (0 points)</div>
+                        </div>
+                    </div>
+
+                    <!-- Scoring -->
+                    <div class="bg-gray-800 rounded-lg p-6">
+                        <h3 class="text-2xl font-bold text-purple-400 mb-4">🏆 Scoring</h3>
+                        <div class="space-y-3 text-gray-300">
+                            <div>Hit notes in time to build your <strong>combo</strong></div>
+                            <div>Higher combos = <strong>score multipliers</strong></div>
+                            <div>Missing notes breaks your combo</div>
+                            <div>Aim for 100% accuracy!</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips -->
+                <div class="bg-gray-800 rounded-lg p-6 mb-8">
+                    <h3 class="text-2xl font-bold text-orange-400 mb-4">💡 Pro Tips</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-300">
+                        <div>• Watch the notes fall down the lanes</div>
+                        <div>• Hit them when they reach the white line</div>
+                        <div>• For hold notes, press and hold until they end</div>
+                        <div>• Start with easier levels to build skill</div>
+                        <div>• Focus on accuracy over speed</div>
+                        <div>• Use headphones for better audio timing</div>
+                    </div>
+                </div>
+
+                <!-- Level Progression -->
+                <div class="bg-gray-800 rounded-lg p-6 mb-8">
+                    <h3 class="text-2xl font-bold text-cyan-400 mb-4">📈 Level Progression</h3>
+                    <div class="space-y-2 text-gray-300">
+                        <div><strong class="text-green-400">Levels 1-3:</strong> Learn basic patterns and timing</div>
+                        <div><strong class="text-yellow-400">Levels 4-7:</strong> Multi-lane coordination</div>
+                        <div><strong class="text-orange-400">Levels 8-10:</strong> Complex rhythms and speed</div>
+                        <div><strong class="text-red-400">Levels 11-15:</strong> Master level challenges</div>
+                        <div><strong class="text-purple-400">Levels 16-30:</strong> Advanced techniques and ultimate tests</div>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button id="closeTutorialBtn" class="bg-blue-600 hover:bg-blue-700 px-8 py-3 rounded-lg font-bold text-base">
+                        Start Playing!
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Game Screen -->
     <div id="gameScreen" class="hidden fixed inset-0 z-40 bg-gradient-to-b from-purple-900 via-blue-900 to-black overflow-hidden">
         <!-- Score and Info -->
@@ -429,18 +534,12 @@
             <div class="text-sm opacity-75" id="currentLevelName">Easy Starter</div>
         </div>
 
-        <!-- Game Controls -->
-        <div class="absolute bottom-4 left-4 z-20 space-x-2">
-            <button id="playBtn" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded font-bold text-base">Play</button>
-            <button id="pauseBtn" class="bg-yellow-600 hover:bg-yellow-700 px-6 py-2 rounded font-bold text-base" disabled>Pause</button>
-            <button id="stopBtn" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded font-bold text-base" disabled>Stop</button>
-            <button id="menuBtn" class="bg-gray-600 hover:bg-gray-700 px-6 py-2 rounded font-bold text-base">Menu</button>
-        </div>
-
-        <!-- Instructions -->
-        <div class="absolute bottom-4 right-4 z-20 text-sm opacity-75 max-w-xs">
-            <div>Press 1, 2, 3, 4 keys or tap lanes</div>
-            <div>Hold for yellow notes, tap for blue notes</div>
+        <!-- Game Controls - Positioned at bottom center for accessibility -->
+        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex flex-row space-x-2">
+            <button id="playBtn" class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded font-bold text-sm">Play</button>
+            <button id="pauseBtn" class="bg-yellow-600 hover:bg-yellow-700 px-3 py-2 rounded font-bold text-sm" disabled>Pause</button>
+            <button id="stopBtn" class="bg-red-600 hover:bg-red-700 px-3 py-2 rounded font-bold text-sm" disabled>Stop</button>
+            <button id="menuBtn" class="bg-gray-600 hover:bg-gray-700 px-3 py-2 rounded font-bold text-sm">Menu</button>
         </div>
 
         <!-- Game Area -->
@@ -568,7 +667,7 @@
                 this.lastTime = 0;
                 this.gameSpeed = 300;
                 this.hitWindow = 150;
-                this.gameState = 'menu'; // menu, playing, stats
+                this.gameState = 'menu'; // menu, playing, stats, tutorial
                 
                 this.levelData = [
                     { name: 'Easy Starter', bpm: 120, difficulty: 1 },
@@ -608,6 +707,7 @@
                 this.initControls();
                 this.initTouchControls();
                 this.initMenuControls();
+                this.initTutorialControls();
                 this.showMenu();
             }
 
@@ -632,6 +732,18 @@
                 
                 oscillator.start(this.audioContext.currentTime);
                 oscillator.stop(this.audioContext.currentTime + duration);
+            }
+
+            initTutorialControls() {
+                // Tutorial button
+                document.getElementById('tutorialBtn').addEventListener('click', () => {
+                    this.showTutorial();
+                });
+
+                // Close tutorial button
+                document.getElementById('closeTutorialBtn').addEventListener('click', () => {
+                    this.showMenu();
+                });
             }
 
             initMenuControls() {
@@ -725,8 +837,18 @@
                 document.getElementById('menuScreen').classList.remove('hidden');
                 document.getElementById('gameScreen').classList.add('hidden');
                 document.getElementById('statsScreen').classList.add('hidden');
+                document.getElementById('tutorialScreen').classList.add('hidden');
                 document.getElementById('countdownOverlay').classList.add('hidden');
                 this.stop();
+            }
+
+            showTutorial() {
+                this.gameState = 'tutorial';
+                document.getElementById('menuScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.add('hidden');
+                document.getElementById('statsScreen').classList.add('hidden');
+                document.getElementById('tutorialScreen').classList.remove('hidden');
+                document.getElementById('countdownOverlay').classList.add('hidden');
             }
 
             showGame() {
@@ -734,6 +856,7 @@
                 document.getElementById('menuScreen').classList.add('hidden');
                 document.getElementById('gameScreen').classList.remove('hidden');
                 document.getElementById('statsScreen').classList.add('hidden');
+                document.getElementById('tutorialScreen').classList.add('hidden');
                 document.getElementById('countdownOverlay').classList.add('hidden');
             }
 
@@ -742,6 +865,7 @@
                 document.getElementById('menuScreen').classList.add('hidden');
                 document.getElementById('gameScreen').classList.add('hidden');
                 document.getElementById('statsScreen').classList.remove('hidden');
+                document.getElementById('tutorialScreen').classList.add('hidden');
                 document.getElementById('countdownOverlay').classList.add('hidden');
                 
                 // Update stats display
